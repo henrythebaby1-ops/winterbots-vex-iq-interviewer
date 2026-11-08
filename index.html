@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WinterBots VEX IQ AI Interviewer</title>
+  <meta name="description" content="Practice VEX IQ judge interviews with a local AI judge powered by Ollama. 190+ questions, follow-ups, coaching tips, and a scored report.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230b5cad'/%3E%3Cg stroke='white' stroke-width='4' stroke-linecap='round'%3E%3Cpath d='M32 12v40M14.7 22l34.6 20M14.7 42l34.6-20'/%3E%3C/g%3E%3Ccircle cx='32' cy='32' r='7' fill='%230b5cad' stroke='white' stroke-width='4'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
+</head>
+<body>
+  <div class="snow" aria-hidden="true"></div>
+
+  <header class="topbar">
+    <div class="brand">
+      <svg class="logo" viewBox="0 0 64 64" aria-hidden="true">
+        <rect width="64" height="64" rx="16" fill="var(--brand)"/>
+        <g stroke="#fff" stroke-width="4" stroke-linecap="round" fill="none">
+          <path d="M32 10v44M13 21l38 22M13 43l38-22"/>
+          <path d="M26 13l6 5 6-5M26 51l6-5 6 5"/>
+        </g>
+        <circle cx="32" cy="32" r="7" fill="var(--brand)" stroke="#fff" stroke-width="4"/>
+      </svg>
+      <div>
+        <h1>WinterBots <span>VEX IQ AI Interviewer</span></h1>
+        <p class="tagline">Practice your judge interview with a local AI judge</p>
+      </div>
+    </div>
+    <button id="connPill" class="conn-pill" type="button" title="Ollama connection">
+      <span class="dot"></span><span class="conn-text">Checking Ollama…</span>
+    </button>
+  </header>
+
+  <nav class="tabs" role="tablist">
+    <button class="tab active" data-tab="interview" role="tab">🎤 Interview</button>
+    <button class="tab" data-tab="bank" role="tab">📚 Question Bank</button>
+    <button class="tab" data-tab="history" role="tab">🕒 History</button>
+    <button class="tab" data-tab="connect" role="tab">🔌 Connect Ollama</button>
+  </nav>
+
+  <main>
+    <!-- ================= INTERVIEW ================= -->
+    <section id="tab-interview" class="tab-panel active">
+
+      <!-- SETUP -->
+      <div id="setupView">
+        <div class="hero card">
+          <div>
+            <h2>Ready for judging? ❄️</h2>
+            <p>Judge Frost will interview your team just like a real VEX IQ judge — asking questions, digging deeper with follow-ups, and giving you a scored report with tips to improve. Everything runs on <strong>your own computer</strong> with Ollama.</p>
+          </div>
+          <div class="hero-stats">
+            <div><b id="statQuestions">190+</b><span>questions</span></div>
+            <div><b id="statCats">17</b><span>categories</span></div>
+            <div><b>9</b><span>modes</span></div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <h3>1. Your team</h3>
+            <div class="form-grid">
+              <label>Team number<input id="teamNumber" placeholder="e.g. 12345A" maxlength="12"></label>
+              <label>Team name<input id="teamName" placeholder="e.g. WinterBots" maxlength="40"></label>
+              <label>Robot nickname <small>(optional)</small><input id="robotName" placeholder="e.g. Blizzard" maxlength="40"></label>
+              <label>Level
+                <select id="gradeLevel">
+                  <option value="Elementary School">Elementary School</option>
+                  <option value="Middle School" selected>Middle School</option>
+                </select>
+              </label>
+              <label class="span-2">This season's game <small>(optional)</small><input id="gameName" placeholder="Game name, so the judge can mention it" maxlength="40"></label>
+              <label class="span-2">Tell the judge about your robot <small>(optional, helps follow-ups)</small>
+                <textarea id="robotInfo" rows="3" placeholder="e.g. 4-motor drivetrain with omni wheels, claw lift with a 3:1 gear ratio, autonomous uses the inertial sensor and distance sensor…"></textarea>
+              </label>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>2. AI judge</h3>
+            <div class="form-grid">
+              <label class="span-2">Ollama model
+                <div class="row">
+                  <select id="modelSelect"><option value="">— connect to Ollama —</option></select>
+                  <button id="refreshModels" class="btn ghost icon" type="button" title="Refresh model list">↻</button>
+                </div>
+              </label>
+              <label>Judge style
+                <select id="judgeStyle">
+                  <option value="friendly">Friendly & encouraging</option>
+                  <option value="standard" selected>Standard judge</option>
+                  <option value="tough">Tough (Worlds-level)</option>
+                </select>
+              </label>
+              <label>Follow-ups per question
+                <select id="followDepth">
+                  <option value="0">None</option>
+                  <option value="1" selected>Up to 1</option>
+                  <option value="2">Up to 2</option>
+                </select>
+              </label>
+              <label>Difficulty
+                <select id="difficulty">
+                  <option value="mixed" selected>Mixed</option>
+                  <option value="easy">Easier</option>
+                  <option value="hard">Harder</option>
+                </select>
+              </label>
+              <label>Questions: <b id="countLabel">12</b>
+                <input id="questionCount" type="range" min="3" max="25" value="12">
+              </label>
+            </div>
+            <div class="toggles">
+              <label class="toggle"><input type="checkbox" id="showTips" checked><span></span>Show coach tips during the interview</label>
+              <label class="toggle"><input type="checkbox" id="speakAloud"><span></span>Read the judge's questions out loud</label>
+              <label class="toggle"><input type="checkbox" id="noAI"><span></span>Practice without AI (questions only)</label>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>3. Interview mode</h3>
+          <div id="modeGrid" class="mode-grid"></div>
+          <div id="customCats" class="custom-cats hidden"></div>
+          <details class="extra">
+            <summary>➕ Add your own questions</summary>
+            <p class="muted">One question per line. They'll be mixed into every interview (for example, questions your coach thinks the judges will ask).</p>
+            <textarea id="customQuestions" rows="4" placeholder="Why did you choose a 6-motor design?&#10;How did your team handle losing a team member mid-season?"></textarea>
+          </details>
+        </div>
+
+        <div class="start-row">
+          <button id="startBtn" class="btn primary big" type="button">Start interview ❄️</button>
+          <p id="startHint" class="muted"></p>
+        </div>
+      </div>
+
+      <!-- LIVE -->
+      <div id="liveView" class="hidden">
+        <div class="live-head card">
+          <div class="live-meta">
+            <span id="liveMode" class="chip"></span>
+            <span id="liveCat" class="chip soft"></span>
+            <span id="liveProgress" class="muted"></span>
+          </div>
+          <div class="live-right">
+            <span id="timer" class="timer" title="Interview time">0:00</span>
+            <button id="endBtn" class="btn ghost small" type="button">End & get report</button>
+          </div>
+          <div class="progress"><div id="progressBar"></div></div>
+        </div>
+
+        <div id="chat" class="chat card" aria-live="polite"></div>
+
+        <form id="composer" class="composer card">
+          <textarea id="answerInput" rows="3" placeholder="Type your team's answer… (Enter to send, Shift+Enter for a new line)"></textarea>
+          <div class="composer-actions">
+            <div class="left">
+              <button id="micBtn" class="btn ghost small" type="button" title="Answer with your voice">🎙️ Speak</button>
+              <button id="repeatBtn" class="btn ghost small" type="button" title="Hear the question again">🔊 Repeat</button>
+              <button id="skipBtn" class="btn ghost small" type="button">Skip ⏭</button>
+            </div>
+            <div class="right">
+              <span id="wordCount" class="muted">0 words</span>
+              <button id="sendBtn" class="btn primary" type="submit">Answer ➤</button>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <!-- REPORT -->
+      <div id="reportView" class="hidden">
+        <div class="card report-head">
+          <div>
+            <h2>Interview report</h2>
+            <p id="reportSub" class="muted"></p>
+          </div>
+          <div class="row wrap">
+            <button id="downloadBtn" class="btn ghost" type="button">⬇ Download transcript</button>
+            <button id="retryWeakBtn" class="btn ghost" type="button">🔁 Retry weakest</button>
+            <button id="againBtn" class="btn primary" type="button">New interview</button>
+          </div>
+        </div>
+        <div id="statCards" class="stat-cards"></div>
+        <div class="grid-2 report-grid">
+          <div class="card">
+            <h3>Scores by category</h3>
+            <div id="catBars" class="cat-bars"></div>
+          </div>
+          <div class="card">
+            <h3>Judge Frost's feedback</h3>
+            <div id="aiReport" class="md"></div>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Question-by-question review</h3>
+          <div id="qaReview" class="qa-review"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= QUESTION BANK ================= -->
+    <section id="tab-bank" class="tab-panel">
+      <div class="card bank-tools">
+        <input id="bankSearch" type="search" placeholder="Search questions… (e.g. gear ratio, notebook, autonomous)">
+        <div id="bankFilters" class="chips"></div>
+      </div>
+      <div id="bankList"></div>
+    </section>
+
+    <!-- ================= HISTORY ================= -->
+    <section id="tab-history" class="tab-panel">
+      <div class="card">
+        <div class="row between">
+          <h3>Past interviews</h3>
+          <button id="clearHistory" class="btn ghost small" type="button">Clear history</button>
+        </div>
+        <p class="muted">Saved only in this browser.</p>
+        <div id="historyList"></div>
+      </div>
+    </section>
+
+    <!-- ================= CONNECT ================= -->
+    <section id="tab-connect" class="tab-panel">
+      <div class="card">
+        <h3>Connect to Ollama</h3>
+        <p>This site runs entirely in your browser and talks to <a href="https://ollama.com" target="_blank" rel="noopener">Ollama</a> on your own computer. Nothing you say is sent to any server.</p>
+        <label class="url-label">Ollama URL
+          <div class="row">
+            <input id="ollamaUrl" value="http://localhost:11434">
+            <button id="testConn" class="btn primary" type="button">Test connection</button>
+          </div>
+        </label>
+        <div id="connResult" class="conn-result"></div>
+      </div>
+
+      <div class="card steps">
+        <h3>First-time setup</h3>
+        <ol>
+          <li><b>Install Ollama</b> from <a href="https://ollama.com/download" target="_blank" rel="noopener">ollama.com/download</a>.</li>
+          <li><b>Download a model.</b> A good one for interviews:
+            <pre><code>ollama pull llama3.2:3b</code></pre>
+            Have a stronger computer? Try <code>llama3.1:8b</code>, <code>qwen2.5:7b</code>, or <code>gemma3:4b</code>.</li>
+          <li><b>Allow this website to talk to Ollama.</b> Ollama blocks websites by default, so tell it this site is OK, then quit and reopen Ollama:
+            <div class="os-tabs">
+              <button class="os active" data-os="mac" type="button">macOS</button>
+              <button class="os" data-os="win" type="button">Windows</button>
+              <button class="os" data-os="linux" type="button">Linux</button>
+            </div>
+            <pre id="osCmd"><code></code></pre>
+            <button id="copyCmd" class="btn ghost small" type="button">Copy command</button>
+          </li>
+          <li><b>Use Chrome, Edge, or Firefox.</b> If the browser asks to allow access to devices on your local network, click <b>Allow</b>. (Safari blocks websites from reaching local apps.)</li>
+          <li>Come back here and press <b>Test connection</b>.</li>
+        </ol>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    Made for the WinterBots ❄️ · Practice tool, not affiliated with VEX Robotics or the REC Foundation · Runs locally with Ollama
+  </footer>
+
+  <div id="toast" class="toast" role="status"></div>
+
+  <script src="questions.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
