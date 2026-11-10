@@ -85,6 +85,24 @@ window.CATEGORIES = [
     ]
   },
   {
+    id: "rules", name: "Rules & Game Manual", icon: "📘",
+    desc: "How well your team knows the official game manual and how the rules shaped your robot.",
+    lookFor: ["Cites specific rules", "Rules shaped design and strategy", "Knows robot and Skills limits"],
+    q: [
+      ["e", "Has your team read the game manual? Who on your team knows the rules best?"],
+      ["e", "What size does your robot have to fit in at the start of a match?"],
+      ["m", "Which rule in the game manual affected your robot design the most? How?"],
+      ["m", "Which rule affects your match strategy the most?"],
+      ["m", "How is scoring different in Robot Skills compared to a teamwork match?"],
+      ["m", "What happens if your robot breaks a rule during a match? How do you avoid that?"],
+      ["m", "How do you keep up with game manual updates and the official Q&A?"],
+      ["m", "What does your robot need to pass inspection?"],
+      ["h", "Tell me about a rule that changed during the season. Did it change anything for your team?"],
+      ["h", "Is there a rule your team found confusing? How did you figure out what it meant?"],
+      ["h", "Which robot rule limits your design the most, and how did you work within it?"]
+    ]
+  },
+  {
     id: "design", name: "Robot Design", icon: "🤖",
     desc: "Your mechanisms, drivetrain, gearing, and design reasoning.",
     lookFor: ["Explains each subsystem", "Understands speed vs. torque", "Reasons for design choices"],
@@ -320,13 +338,13 @@ window.MODES = [
   {
     id: "full", name: "Full Judge Interview", icon: "🏆", minutes: 10, defaultCount: 12,
     desc: "A realistic, well-rounded interview across every judged area.",
-    plan: [["intro", 1], ["edp", 2], ["notebook", 1], ["strategy", 1], ["design", 1], ["build", 1], ["programming", 1], ["testing", 1], ["teamwork", 1], ["management", 1], ["student", 1], ["creativity", 1], ["sensors", 1], ["outreach", 1], ["reflection", 1]],
+    plan: [["intro", 1], ["edp", 2], ["notebook", 1], ["strategy", 1], ["rules", 1], ["design", 1], ["build", 1], ["programming", 1], ["testing", 1], ["teamwork", 1], ["management", 1], ["student", 1], ["creativity", 1], ["sensors", 1], ["outreach", 1], ["reflection", 1]],
     closer: true
   },
   {
     id: "quick", name: "Quick Practice", icon: "⚡", minutes: 5, defaultCount: 6,
     desc: "Six mixed questions — great for a warm-up before judging.",
-    pool: ["edp", "strategy", "design", "build", "programming", "testing", "teamwork", "management"], intro: true
+    pool: ["edp", "strategy", "rules", "design", "build", "programming", "testing", "teamwork", "management"], intro: true
   },
   {
     id: "design-award", name: "Design & Excellence Focus", icon: "📐", minutes: 10, defaultCount: 10,
@@ -336,12 +354,12 @@ window.MODES = [
   {
     id: "think", name: "Think Award Focus", icon: "🧠", minutes: 8, defaultCount: 9,
     desc: "Programming, autonomous, sensors, and debugging.",
-    pool: ["programming", "sensors", "testing", "strategy"], intro: true
+    pool: ["programming", "sensors", "testing", "strategy", "rules"], intro: true
   },
   {
     id: "robot", name: "Amaze / Build / Create Focus", icon: "🛠️", minutes: 8, defaultCount: 9,
     desc: "Robot design, build quality, and creative mechanisms.",
-    pool: ["design", "build", "creativity", "testing"], intro: true
+    pool: ["design", "build", "creativity", "testing", "rules"], intro: true
   },
   {
     id: "character", name: "Teamwork & Character", icon: "💙", minutes: 8, defaultCount: 9,
@@ -351,7 +369,7 @@ window.MODES = [
   {
     id: "rapid", name: "Rapid Fire", icon: "🔥", minutes: 6, defaultCount: 15, noFollowups: true,
     desc: "Fifteen fast questions, no follow-ups. Practice short, sharp answers.",
-    pool: ["intro", "edp", "notebook", "strategy", "design", "build", "programming", "sensors", "driving", "testing", "creativity", "management", "teamwork", "student", "outreach", "reflection"]
+    pool: ["intro", "edp", "notebook", "strategy", "rules", "design", "build", "programming", "sensors", "driving", "testing", "creativity", "management", "teamwork", "student", "outreach", "reflection"]
   },
   {
     id: "curveball", name: "Curveball Challenge", icon: "🌀", minutes: 8, defaultCount: 8,

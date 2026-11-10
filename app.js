@@ -31,7 +31,7 @@
 
   // ---------- settings ----------
   const FIELDS = ["teamNumber", "teamName", "robotName", "gradeLevel", "gameName", "robotInfo", "judgeStyle", "followDepth", "difficulty", "questionCount", "customQuestions", "ollamaUrl"];
-  const TOGGLES = ["showTips", "speakAloud", "noAI"];
+  const TOGGLES = ["showTips", "speakAloud", "noAI", "useManual"];
   let selectedMode = store.get("mode", "full");
   let customCatIds = store.get("customCats", ["edp", "design", "programming"]);
 
@@ -99,7 +99,7 @@
   async function ollamaChat({ messages, format, stream = false, onToken, temperature = 0.6 }) {
     const model = $("#modelSelect").value;
     if (!model) throw new Error("No model selected");
-    const body = { model, messages, stream, keep_alive: "15m", options: { temperature, num_ctx: 8192 } };
+    const body = { model, messages, stream, keep_alive: "15m", options: { temperature, num_ctx: 12288 } };
     if (format) body.format = format;
     if (THINKERS.test(model)) body.think = false;
 
@@ -134,6 +134,124 @@
     }
     return stripThink(full);
   }
+
+  // ---------- official game manual (kept fresh by a daily GitHub Action) ----------
+  const M = { data: null, docs: [], df: new Map(), avgdl: 1, error: "" };
+  const STOP = new Set("a an the and or but if of to in on at by for with from as is are was were be been being it its this that these those you your we our they their he she i me my do does did can could should would will may must not no so than then there here what when where which who why how all any each other some such only own same too very just also into over under about after before during while robot robots team teams".split(" "));
+  const tok = (s) => (String(s).toLowerCase().match(/[a-z0-9]+/g) || [])
+    .filter((w) => w.length > 1 && !STOP.has(w))
+    .map((w) => (w.length > 4 && w.endsWith("ing") ? w.slice(0, -3) : w.length > 3 && w.endsWith("s") && !w.endsWith("ss") ? w.slice(0, -1) : w));
+
+  function indexManual(data) {
+    M.data = data; M.df = new Map();
+    M.docs = data.chunks.map((c) => {
+      const terms = tok(`${c.title} ${c.title} ${c.rule} ${c.text}`);
+      const tf = new Map(); terms.forEach((t) => tf.set(t, (tf.get(t) || 0) + 1));
+      tf.forEach((_, t) => M.df.set(t, (M.df.get(t) || 0) + 1));
+      return { c, tf, len: terms.length };
+    });
+    M.avgdl = M.docs.reduce((s, d) => s + d.len, 0) / Math.max(1, M.docs.length);
+  }
+
+  function searchManual(query, k = 3) {
+    if (!M.docs.length) return [];
+    const N = M.docs.length, k1 = 1.4, b = 0.75;
+    const ruleRefs = (String(query).match(/<?\b(SG|GG|G|R|RSC|T|S)\s?(\d{1,2})\b>?/gi) || []).map((r) => r.replace(/[<>\s]/g, "").toUpperCase());
+    const q = [...new Set(tok(query))];
+    const scored = M.docs.map((d) => {
+      let s = 0;
+      for (const t of q) {
+        const f = d.tf.get(t); if (!f) continue;
+        const idf = Math.log(1 + (N - M.df.get(t) + 0.5) / (M.df.get(t) + 0.5));
+        s += idf * (f * (k1 + 1)) / (f + k1 * (1 - b + (b * d.len) / M.avgdl));
+      }
+      if (d.c.rule && ruleRefs.includes(d.c.rule)) s += 25;
+      return { c: d.c, s };
+    }).filter((x) => x.s > 0).sort((a, b) => b.s - a.s);
+    return scored.slice(0, k);
+  }
+
+  function primerChunk() {
+    if (!M.data) return null;
+    return M.data.chunks.find((c) => /primer|overview/i.test(c.title)) || M.data.chunks[0];
+  }
+
+  function manualLabel() {
+    const d = M.data; return d ? `VEX IQ ${d.game} game manual v${d.version}${d.season ? ` (${d.season})` : ""}` : "";
+  }
+
+  // Build the manual excerpt block that goes into the judge's prompt.
+  function manualContext(query, maxChars = 3200, k = 3) {
+    if (!M.data || !$("#useManual").checked) return { text: "", used: [] };
+    const picks = [];
+    const p = primerChunk(); if (p) picks.push(p);
+    searchManual(query, k + 1).forEach(({ c }) => { if (!picks.includes(c)) picks.push(c); });
+    let out = "", used = [];
+    for (const c of picks) {
+      const piece = `[${c.rule ? "<" + c.rule + ">" : c.title} — ${c.sec}]\n${c.text}\n\n`;
+      if (out.length + piece.length > maxChars) {
+        if (!out) out = piece.slice(0, maxChars);
+        continue;
+      }
+      out += piece; used.push(c);
+    }
+    return { text: out.trim(), used };
+  }
+
+  async function loadManual(announce) {
+    try {
+      const r = await fetch("manual/manual.json", { cache: "no-cache" });
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      const data = await r.json();
+      const changed = !M.data || M.data.hash !== data.hash;
+      if (changed) {
+        indexManual(data);
+        if (announce && M.docs.length) toast(`📘 Loaded newest manual: ${data.game} v${data.version}`);
+      }
+      M.error = "";
+    } catch (e) {
+      M.error = e.message;
+    }
+    renderManualStatus();
+  }
+
+  function renderManualStatus() {
+    const el = $("#manualStatus");
+    const d = M.data;
+    if (d) {
+      const when = new Date(d.fetchedAt).toLocaleDateString();
+      el.innerHTML = `📘 Judge has the <a href="${esc(d.source)}" target="_blank" rel="noopener">${esc(manualLabel())}</a> · ${d.chunks.length} rule sections · updated ${esc(when)}`;
+      $("#gameName").placeholder = `${d.game} (from the official manual)`;
+      $("#statRules").textContent = "v" + d.version; $("#statRules").nextElementSibling.textContent = `${d.game} manual`;
+      $("#manualInfo").innerHTML = `<b>${esc(manualLabel())}</b><br><span class="muted">Downloaded from manuals.vex.com on ${esc(new Date(d.fetchedAt).toLocaleString())}. This site checks for a newer version every day, and loads the newest copy each time you start an interview.</span>
+        <div class="row wrap" style="margin-top:10px">${d.sections.map((s) => `<a class="fchip" href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title)}</a>`).join("")}</div>`;
+    } else {
+      el.textContent = M.error ? "📘 Game manual not available yet — the judge will use general VEX IQ knowledge." : "📘 Loading game manual…";
+      $("#manualInfo").innerHTML = `<span class="muted">${M.error ? "The manual hasn't been downloaded yet. It updates automatically every day from manuals.vex.com." : "Loading…"}</span>`;
+    }
+    renderManualSearch();
+  }
+
+  function renderManualSearch() {
+    const box = $("#manualResults"); if (!box) return;
+    const q = $("#manualSearch").value.trim();
+    if (!M.data) { box.innerHTML = ""; return; }
+    const list = q ? searchManual(q, 12).map((x) => x.c) : M.data.chunks.filter((c) => c.rule).slice(0, 0);
+    if (!q) { box.innerHTML = `<p class="muted">Search the rules — try “starting position”, “SG3”, “expansion”, “autonomous”, or “inspection”.</p>`; return; }
+    if (!list.length) { box.innerHTML = `<p class="muted">No rules match “${esc(q)}”.</p>`; return; }
+    box.innerHTML = "";
+    list.forEach((c) => {
+      const d = document.createElement("details"); d.className = "qa";
+      d.innerHTML = `<summary><span class="qtext"></span><span class="chip soft"></span></summary><div class="body"><p></p><a target="_blank" rel="noopener">Open in official manual ↗</a></div>`;
+      d.querySelector(".qtext").textContent = c.title;
+      d.querySelector(".chip").textContent = c.sec.replace(/^Section \d+ - /, "");
+      d.querySelector(".body p").textContent = c.text;
+      d.querySelector(".body a").href = c.url;
+      box.appendChild(d);
+    });
+    box.firstElementChild.open = true;
+  }
+  $("#manualSearch").addEventListener("input", renderManualSearch);
 
   // ---------- mode picker ----------
   function renderModes() {
@@ -239,8 +357,9 @@
     return n && num ? `${n} (${num})` : n || num || "your team";
   }
 
-  function startInterview(overrideQuestions) {
+  async function startInterview(overrideQuestions) {
     saveSettings();
+    if ($("#useManual").checked) await loadManual(true); // always pick up the newest manual
     const noAI = $("#noAI").checked;
     if (!noAI && (!connected || !$("#modelSelect").value)) {
       $("#startHint").innerHTML = `Ollama isn't connected. <a href="#" id="goConnect">Set it up</a> or turn on <b>Practice without AI</b>.`;
@@ -331,6 +450,12 @@
     const d = document.createElement("div"); d.className = "tip";
     d.innerHTML = `<b>Coach tip</b>${score != null ? `<span class="score-pill ${scoreClass(score)}">${score}/5</span>` : ""}<br>`;
     d.appendChild(document.createTextNode(tip || ""));
+    const refs = (S.lastManual || []).filter((c) => c.rule).slice(0, 3);
+    if (refs.length) {
+      const r = document.createElement("div"); r.className = "refs"; r.append("📘 Manual: ");
+      refs.forEach((c, i) => { const a = document.createElement("a"); a.href = c.url; a.target = "_blank"; a.rel = "noopener"; a.textContent = c.title; if (i) r.append(" · "); r.appendChild(a); });
+      d.appendChild(r);
+    }
     msgEl.querySelector(".bubble").appendChild(d);
     $("#chat").scrollTop = $("#chat").scrollHeight;
   }
@@ -360,7 +485,7 @@
       `Level: ${$("#gradeLevel").value} (VEX IQ Robotics Competition)`
     ];
     const robot = $("#robotName").value.trim(); if (robot) lines.push(`Robot nickname: ${robot}`);
-    const game = $("#gameName").value.trim(); if (game) lines.push(`This season's game: ${game}`);
+    const game = $("#gameName").value.trim() || (M.data ? M.data.game : ""); if (game) lines.push(`This season's game: ${game}`);
     const info = $("#robotInfo").value.trim(); if (info) lines.push(`What the team told us about their robot: ${info.slice(0, 800)}`);
     return lines.join("\n");
   }
@@ -377,6 +502,15 @@
     const a = S.answers[S.idx];
     const canFollow = S.follows < S.depth;
     const exchange = a.exchanges.map((x, i) => `${i === 0 ? "Main question" : "Follow-up"}: ${x.q}\nTeam answer: ${x.a}`).join("\n\n");
+    const man = manualContext(`${a.q.catName} ${a.exchanges.map((x) => x.q + " " + x.a).join(" ")}`);
+    const manualRules = man.text ? `
+
+You have read the official ${manualLabel()}. Relevant excerpts are below. Use them to understand the game and to check what the team says about rules, scoring, field, robot limits, and Robot Skills. If the team says something that contradicts the manual, gently mention it in "coach_tip" and cite the rule number (for example <SG3>). You may base a follow-up on the manual (for example, how a rule affected their design or strategy). Never invent rules that are not in the excerpts.
+
+=== OFFICIAL MANUAL EXCERPTS ===
+${man.text}
+=== END OF EXCERPTS ===` : "";
+    S.lastManual = man.used;
     const sys = `You are ${JUDGE}, a judge at a VEX IQ Robotics Competition event, interviewing a team of ${$("#gradeLevel").value.toLowerCase()} students about their robot and season. ${styleRules()}
 
 VEX IQ judges look for: the engineering design process, an engineering notebook, game strategy, robot design and build quality, programming (VEXcode IQ Blocks, Python, or C++), use of sensors, testing and iteration, creativity, team and project management, teamwork and communication, and evidence that STUDENTS (not adults) did the work. Strong answers are specific, give real examples, explain WHY, mention data or testing, and involve multiple team members.
@@ -385,7 +519,7 @@ You reply ONLY with JSON:
 - "reaction": 1-2 short, natural sentences reacting to what the team just said. Be specific to their answer. Do not ask a question here. Do not repeat the question. Never give them the answer.
 - "follow_up": ${canFollow ? "If the answer was vague, short, off-topic, or missing a reason, example, or evidence, ask ONE short follow-up question (under 25 words) that digs deeper into what they said, like a real judge would. If the answer was already thorough, use an empty string." : 'MUST be an empty string "" (no more follow-ups for this question).'}
 - "score": integer 0-5 for the quality of the team's answer(s) to this question so far. 0 = no answer, 1 = very weak, 2 = basic/vague, 3 = solid with some detail, 4 = strong with examples and reasons, 5 = outstanding, specific, evidence-based.
-- "coach_tip": ONE sentence of coaching (written to the students) on how to make this answer even stronger for real judges.`;
+- "coach_tip": ONE sentence of coaching (written to the students) on how to make this answer even stronger for real judges.${manualRules}`;
 
     const user = `${contextBlock()}
 
@@ -574,7 +708,14 @@ Write your JSON now.`;
   }
 
   async function generateReport() {
-    const sys = `You are ${JUDGE}, an experienced VEX IQ Robotics Competition judge and coach. You just interviewed a team of ${$("#gradeLevel").value.toLowerCase()} students. Write feedback that helps them get better at real judge interviews. Be honest, specific, and encouraging. Quote short bits of what they said. Never invent facts about their robot. Write for students: clear, friendly, and concise.`;
+    const man = manualContext(transcriptText().slice(0, 4000), 4000, 5);
+    const sys = `You are ${JUDGE}, an experienced VEX IQ Robotics Competition judge and coach. You just interviewed a team of ${$("#gradeLevel").value.toLowerCase()} students. Write feedback that helps them get better at real judge interviews. Be honest, specific, and encouraging. Quote short bits of what they said. Never invent facts about their robot. Write for students: clear, friendly, and concise.${man.text ? `
+
+You have the official ${manualLabel()}. Relevant excerpts:
+=== OFFICIAL MANUAL EXCERPTS ===
+${man.text}
+=== END OF EXCERPTS ===
+Only cite rules that appear in these excerpts.` : ""}`;
     const user = `${contextBlock()}
 Interview mode: ${S.mode.name}. Time used: ${fmtTime(S.elapsed)} (target about ${S.mode.minutes} minutes).
 
@@ -599,7 +740,10 @@ Bullets with concrete, actionable advice.
 Pick their weakest answer. Show the question, then a stronger example answer written in the team's voice that keeps their real facts and uses [brackets] for details they should fill in (like [number of tests] or [teammate name]).
 
 ## Practice plan before the next event
-3-4 short bullets.`;
+3-4 short bullets.${man.text ? `
+
+## Rules check
+Compare what the team said about the game, rules, scoring, robot limits, or Robot Skills with the manual excerpts. List anything they got wrong or should double-check, citing rule numbers like <SG1>. If everything matched, say so and name one rule they should know well for their strategy.` : ""}`;
     const out = await ollamaChat({
       messages: [{ role: "system", content: sys }, { role: "user", content: user }],
       stream: true, temperature: 0.5,
@@ -805,4 +949,5 @@ Pick their weakest answer. Show the question, then a stronger example answer wri
   renderBank();
   renderOS();
   fetchModels();
+  loadManual(false);
 })();

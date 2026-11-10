@@ -6,7 +6,7 @@ Practice your VEX IQ judge interview with an AI judge ("Judge Frost") that runs 
 
 ## Features
 
-- **191 questions in 17 categories**: engineering design process, notebook, game strategy, robot design, build, programming, sensors, driving, testing, creativity, project management, teamwork, sportsmanship, outreach, reflection, and curveballs
+- **200+ questions in 18 categories**: engineering design process, notebook, game strategy, robot design, build, programming, sensors, driving, testing, creativity, project management, teamwork, sportsmanship, outreach, reflection, and curveballs
 - **9 interview modes**: Full Judge Interview, Quick Practice, Design & Excellence, Think Award, Amaze/Build/Create, Teamwork & Character, Rapid Fire, Curveball Challenge, and Custom
 - **Real follow-up questions**: the AI digs deeper when an answer is vague, just like real judges
 - **Live coach tips and a 0–5 score** for every answer
@@ -14,6 +14,7 @@ Practice your VEX IQ judge interview with an AI judge ("Judge Frost") that runs 
 - **Voice mode**: answer by speaking (Chrome/Edge) and have questions read aloud
 - Judge styles (friendly, standard, tough), difficulty levels, a timer, your own custom questions, a searchable question bank, history, and transcript download
 - Works without AI too (questions only)
+- **Reads the official game manual**: a daily GitHub Action ([update-manual.yml](.github/workflows/update-manual.yml)) finds the newest VEX IQ manual on [manuals.vex.com](https://manuals.vex.com) and saves it to `manual/manual.json`. Every interview loads the newest copy, and the judge gets the rules that relate to each answer, so it can check what you say and cite rules like `<SG1>`. There's also a searchable **Game Manual** tab.
 
 ## Setup
 

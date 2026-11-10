@@ -39,6 +39,7 @@
   <nav class="tabs" role="tablist">
     <button class="tab active" data-tab="interview" role="tab">🎤 Interview</button>
     <button class="tab" data-tab="bank" role="tab">📚 Question Bank</button>
+    <button class="tab" data-tab="manual" role="tab">📘 Game Manual</button>
     <button class="tab" data-tab="history" role="tab">🕒 History</button>
     <button class="tab" data-tab="connect" role="tab">🔌 Connect Ollama</button>
   </nav>
@@ -58,6 +59,7 @@
             <div><b id="statQuestions">190+</b><span>questions</span></div>
             <div><b id="statCats">17</b><span>categories</span></div>
             <div><b>9</b><span>modes</span></div>
+            <div><b id="statRules">📘</b><span>game manual</span></div>
           </div>
         </div>
 
@@ -118,8 +120,10 @@
             <div class="toggles">
               <label class="toggle"><input type="checkbox" id="showTips" checked><span></span>Show coach tips during the interview</label>
               <label class="toggle"><input type="checkbox" id="speakAloud"><span></span>Read the judge's questions out loud</label>
+              <label class="toggle"><input type="checkbox" id="useManual" checked><span></span>Judge reads the official game manual</label>
               <label class="toggle"><input type="checkbox" id="noAI"><span></span>Practice without AI (questions only)</label>
             </div>
+            <p id="manualStatus" class="manual-status">📘 Loading game manual…</p>
           </div>
         </div>
 
@@ -211,6 +215,19 @@
         <div id="bankFilters" class="chips"></div>
       </div>
       <div id="bankList"></div>
+    </section>
+
+    <!-- ================= GAME MANUAL ================= -->
+    <section id="tab-manual" class="tab-panel">
+      <div class="card">
+        <h3>📘 Official game manual</h3>
+        <div id="manualInfo"></div>
+      </div>
+      <div class="card bank-tools">
+        <input id="manualSearch" type="search" placeholder="Search the rules… (e.g. starting position, SG3, autonomous, inspection)">
+      </div>
+      <div class="card"><div id="manualResults" class="qa-review"></div></div>
+      <p class="muted small-note">Manual text © VEX Robotics, Inc., copied from <a href="https://manuals.vex.com" target="_blank" rel="noopener">manuals.vex.com</a> so the AI judge can read it. Official rulings come only from the official manual and the <a href="https://events.vex.com" target="_blank" rel="noopener">official Q&amp;A</a>.</p>
     </section>
 
     <!-- ================= HISTORY ================= -->

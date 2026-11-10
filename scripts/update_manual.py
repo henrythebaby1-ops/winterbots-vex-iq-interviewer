@@ -71,12 +71,16 @@ def block_text(el):
     for img in el.find_all("img"):
         alt = img.get("alt", "").strip()
         img.replace_with(f"[image: {alt}]" if alt else "")
-    for li in el.find_all("li"):
-        li.insert(0, "• ")
+    for br in el.find_all("br"):
+        br.replace_with("\n")
     for row in el.find_all("tr"):
         cells = [c.get_text(" ", strip=True) for c in row.find_all(["td", "th"])]
         row.replace_with(" | ".join(cells) + "\n")
-    return el.get_text("\n")
+    for li in el.find_all("li"):
+        li.insert(0, "\n• ")
+    for blk in el.find_all(["p", "summary", "h2", "h3", "h4", "h5", "div", "ol", "ul", "table"]):
+        blk.append("\n")
+    return el.get_text("") + "\n"
 
 
 def parse_section(slug, ver, sec):
@@ -95,6 +99,9 @@ def parse_section(slug, ver, sec):
     def flush():
         if cur and clean(cur["text"]):
             body = clean(cur["text"])
+            if cur["rule"]:
+                m = re.match(r"<\w+>\s*([^.\n]{3,80})\.", body)
+                cur["title"] = f"<{cur['rule']}> " + (m.group(1).strip() if m else cur["title"].split(" — ")[0])
             # split long chunks on line boundaries
             parts, buf = [], ""
             for line in body.split("\n"):

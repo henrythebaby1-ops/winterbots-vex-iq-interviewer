@@ -269,6 +269,12 @@ input[type="range"] { padding: 0; accent-color: var(--brand); background: transp
 .diff.m { background: var(--warn-soft); color: var(--warn); }
 .diff.h { background: var(--bad-soft); color: var(--bad); }
 
+.manual-status { margin: 14px 0 0; font-size: .84rem; color: var(--muted); background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; }
+.refs { margin-top: 6px; font-size: .78rem; color: var(--muted); }
+.refs a { color: var(--brand); }
+.small-note { font-size: .8rem; text-align: center; }
+a.fchip { text-decoration: none; }
+
 /* history */
 .hist { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 12px 0; border-top: 1px solid var(--border); flex-wrap: wrap; }
 .hist b { font-family: Outfit, sans-serif; }
